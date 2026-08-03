@@ -12,7 +12,7 @@ import mlflow.xgboost
 import numpy as np
 import pandas as pd
 import xgboost as xgb
-from sklearn.metrics import mean_absolute_error, mean_absolute_percentage_error, mean_squared_error
+from sklearn.metrics import mean_absolute_error, mean_absolute_percentage_error, root_mean_squared_error
 
 from src.config import FEATURE_COLS, FEATURES_PATH, MLFLOW_EXPERIMENT, MODEL_PATH, MODELS_DIR, TARGET_COL
 
@@ -30,7 +30,7 @@ def _time_split(df: pd.DataFrame) -> tuple[pd.DataFrame, pd.DataFrame]:
 def _metrics(y_true, y_pred) -> dict:
     return {
         "mae": mean_absolute_error(y_true, y_pred),
-        "rmse": mean_squared_error(y_true, y_pred, squared=False),
+        "rmse": root_mean_squared_error(y_true, y_pred),
         "mape": mean_absolute_percentage_error(y_true, y_pred),
     }
 
