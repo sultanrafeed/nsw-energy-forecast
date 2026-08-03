@@ -13,7 +13,6 @@ import numpy as np
 import pandas as pd
 import xgboost as xgb
 from sklearn.metrics import mean_absolute_error, mean_absolute_percentage_error, root_mean_squared_error
-
 from src.config import FEATURE_COLS, FEATURES_PATH, MLFLOW_EXPERIMENT, MODEL_PATH, MODELS_DIR, TARGET_COL
 
 logging.basicConfig(level=logging.INFO)

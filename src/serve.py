@@ -12,7 +12,7 @@ import time
 
 import xgboost as xgb
 from fastapi import FastAPI, HTTPException
-
+from contextlib import asynccontextmanager
 from src.config import FEATURE_COLS, MODEL_PATH
 from src.schemas import PredictionRequest, PredictionResponse
 
@@ -21,13 +21,28 @@ logger = logging.getLogger(__name__)
 
 MODEL_VERSION = "v1"
 
+_state = {"model": None, "request_count": 0, "started_at": time.time()}
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    if not MODEL_PATH.exists():
+        logger.warning("No trained model found at %s — run `python -m src.train` first.", MODEL_PATH)
+    else:
+        model = xgb.XGBRegressor()
+        model.load_model(MODEL_PATH)
+        _state["model"] = model
+        logger.info("Model loaded from %s", MODEL_PATH)
+    yield
+    _state["model"] = None
+
+
 app = FastAPI(
     title="NSW Electricity Demand Forecast API",
     version=MODEL_VERSION,
     description="Predicts half-hourly NSW electricity demand (MW).",
+    lifespan=lifespan,
 )
-
-_state = {"model": None, "request_count": 0, "started_at": time.time()}
 
 
 @app.on_event("startup")

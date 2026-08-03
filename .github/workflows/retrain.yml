@@ -1,0 +1,72 @@
+name: Weekly Retrain
+
+on:
+  schedule:
+    - cron: "0 18 * * 0"  # Sundays 18:00 UTC — adjust to your data refresh cadence
+  workflow_dispatch: {}     # lets you trigger it manually from the Actions tab too
+
+jobs:
+  retrain:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      # In a real deployment this step would pull fresh data from an
+      # external source (AEMO API, S3, a database) instead of reusing
+      # the checked-in CSV. Left as a placeholder so the champion/
+      # challenger logic below is the part that's real and testable.
+      - name: Rebuild features
+        run: python -m src.data_pipeline
+
+      - name: Train challenger model
+        id: train
+        run: |
+          python -m src.train | tee train_output.log
+          MAPE=$(grep "Model metrics" train_output.log | grep -oP "'mape': \K[0-9.]+")
+          echo "challenger_mape=$MAPE" >> "$GITHUB_OUTPUT"
+
+      - name: Compare against currently deployed model
+        id: gate
+        run: |
+          python - <<'PY'
+          import json, os
+          from pathlib import Path
+
+          challenger_mape = float("${{ steps.train.outputs.challenger_mape }}")
+          champion_path = Path("models/champion_mape.json")
+
+          if champion_path.exists():
+              champion_mape = json.loads(champion_path.read_text())["mape"]
+          else:
+              champion_mape = float("inf")  # no champion yet — first run always promotes
+
+          promote = challenger_mape < champion_mape
+          print(f"Challenger MAPE: {challenger_mape:.4f} | Champion MAPE: {champion_mape:.4f} | Promote: {promote}")
+
+          with open(os.environ["GITHUB_OUTPUT"], "a") as f:
+              f.write(f"promote={str(promote).lower()}\n")
+
+          if promote:
+              champion_path.write_text(json.dumps({"mape": challenger_mape}))
+          PY
+
+      - name: Promote challenger to champion
+        if: steps.gate.outputs.promote == 'true'
+        run: |
+          echo "New model beat the champion — committing updated model + champion record."
+          git config user.name "retrain-bot"
+          git config user.email "retrain-bot@users.noreply.github.com"
+          git add models/model.json models/champion_mape.json
+          git commit -m "chore: promote retrained model (MAPE ${{ steps.train.outputs.challenger_mape }})"
+          git push
+
+      - name: Skip promotion
+        if: steps.gate.outputs.promote == 'false'
+        run: echo "Challenger did not beat the champion — keeping the current model in production."
