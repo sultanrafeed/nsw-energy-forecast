@@ -118,8 +118,3 @@ champion record.
 - Baseline (naive lag-168h / "same time last week" forecast) vs XGBoost, so
   the model's lift over a trivial forecast is explicit and honest.
 
-## CV bullet
-"Built and deployed an end-to-end electricity demand forecasting system
-(XGBoost, FastAPI, MLflow, Docker) on 5 years of real NSW AEMO grid data,
-achieving 1.5% MAPE — a 72.4% error reduction over a naive baseline — with
-automated weekly retraining via a champion/challenger CI pipeline."
