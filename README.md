@@ -6,6 +6,14 @@ and price using the AEMO NSW Price & Demand dataset (2018-2023, Kaggle).
 Built to demonstrate an end-to-end ML engineering workflow — not just a model
 in a notebook.
 
+## Live demo
+API: **https://nsw-energy-forecast.onrender.com/docs**
+
+Hosted on Render's free tier, which spins down after inactivity — the first
+request after idle may take ~50s to wake up. Subsequent requests are fast.
+
+
+
 ## Architecture
 
 ```
